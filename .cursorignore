@@ -1,0 +1,12 @@
+# Never index/expose secrets to AI tooling
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env*.local
+
+# Build artifacts / dependencies (no need to index)
+node_modules/
+.next/
+out/
