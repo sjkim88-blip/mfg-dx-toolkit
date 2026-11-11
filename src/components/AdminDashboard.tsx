@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconChevronDown } from "@tabler/icons-react";
+import { IconChevronDown, IconGauge } from "@tabler/icons-react";
 import { floors } from "@/data/diagnosisData";
 import { useDiagnosis } from "@/context/DiagnosisContext";
 import {
@@ -11,6 +11,7 @@ import {
   getFloorProgress,
 } from "@/lib/diagnosisUtils";
 import { captureStatusIcons } from "@/lib/captureStatusMeta";
+import { floorIcons } from "@/lib/floorMeta";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Activity, Domain, Progress } from "@/lib/types";
 
@@ -48,29 +49,54 @@ export function AdminDashboard({
     (sum, floor) => sum + getFloorProgress(floor, captureStatusMap).recorded,
     0
   );
+  const totalCriticalGaps = floors.reduce(
+    (sum, floor) =>
+      sum +
+      countCriticalGaps(
+        floor.domains.flatMap((d) => d.activities.flatMap((a) => a.targets)),
+        captureStatusMap
+      ),
+    0
+  );
+  const completionPct = totalTargets === 0 ? 0 : Math.round((totalRecorded / totalTargets) * 100);
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">관리자 화면</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Floor → Domain → Activity 계층으로 전체 Target 포착 현황을 확인합니다. 자동화 비율과
-          미기록 비율, 그리고 &ldquo;핵심 미기록&rdquo;(우선순위 높음인데 아직 못 모으는 Target) 건수를 함께
-          표시해 데이터 플랫폼 구축 시 가장 먼저 메워야 할 공백을 확인할 수 있습니다. Activity를 펼치면
-          Target별 세부입력 내용을 볼 수 있습니다.
-        </p>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-gray-200 bg-white text-gray-500 shadow-sm">
+          <IconGauge size={19} stroke={1.75} />
+        </span>
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">관리자 화면</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Floor → Domain → Activity 계층으로 전체 Target 포착 현황을 확인합니다. 자동화 비율과
+            미기록 비율, 그리고 &ldquo;핵심 미기록&rdquo;(우선순위 높음인데 아직 못 모으는 Target) 건수를 함께
+            표시해 데이터 플랫폼 구축 시 가장 먼저 메워야 할 공백을 확인할 수 있습니다. Activity를 펼치면
+            Target별 세부입력 내용을 볼 수 있습니다.
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3 rounded-[12px] border-[0.5px] border-gray-300 bg-gray-50 p-4">
-        <span className="text-sm font-medium text-gray-900">포착된 Target</span>
-        <span className="text-lg font-semibold text-gray-900">
-          {totalRecorded}/{totalTargets}
-        </span>
-        <div className="ml-auto h-2 w-40 overflow-hidden rounded-full border-[0.5px] border-gray-300 bg-white">
-          <div
-            className="h-full bg-gray-800 transition-all"
-            style={{ width: `${totalTargets === 0 ? 0 : (totalRecorded / totalTargets) * 100}%` }}
-          />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border-[0.5px] border-gray-200 bg-white p-4 shadow-sm">
+          <span className="text-[11px] text-gray-400">전체 진행률</span>
+          <div className="mt-1 text-xl font-semibold text-gray-900">{completionPct}%</div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full bg-gray-800 transition-all"
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+        </div>
+        <div className="rounded-2xl border-[0.5px] border-gray-200 bg-white p-4 shadow-sm">
+          <span className="text-[11px] text-gray-400">포착된 Target</span>
+          <div className="mt-1 text-xl font-semibold text-gray-900">
+            {totalRecorded}/{totalTargets}
+          </div>
+        </div>
+        <div className="rounded-2xl border-[0.5px] border-gray-200 bg-white p-4 shadow-sm">
+          <span className="text-[11px] text-gray-400">핵심 미기록</span>
+          <div className="mt-1 text-xl font-semibold text-gray-900">{totalCriticalGaps}건</div>
         </div>
       </div>
 
@@ -81,18 +107,22 @@ export function AdminDashboard({
           const floorProgress = getFloorProgress(floor, captureStatusMap);
           const floorTargets = floor.domains.flatMap((d) => d.activities.flatMap((a) => a.targets));
           const floorCriticalGaps = countCriticalGaps(floorTargets, captureStatusMap);
+          const FloorIcon = floorIcons[floor.id];
           return (
             <section
               key={floor.id}
-              className="rounded-[12px] border-[0.5px] border-gray-300 bg-white p-5"
+              className="rounded-2xl border-[0.5px] border-gray-200 bg-white p-5 shadow-sm"
             >
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-gray-900">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                    {FloorIcon && <FloorIcon size={15} stroke={1.75} />}
+                  </span>
                   {floor.nameEn} <span className="font-normal text-gray-400">· {floor.nameKo}</span>
                 </h2>
                 <StatusBadge progress={floorProgress} />
               </div>
-              <div className="mb-4">
+              <div className="mb-4 pl-9">
                 <RateHint progress={floorProgress} criticalGaps={floorCriticalGaps} />
               </div>
 
@@ -104,7 +134,7 @@ export function AdminDashboard({
                   return (
                     <div
                       key={domain.id}
-                      className="rounded-[12px] border-[0.5px] border-gray-200 bg-gray-50 p-4"
+                      className="rounded-xl border-[0.5px] border-gray-200 bg-gray-50/60 p-4"
                     >
                       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm font-medium text-gray-900">
@@ -123,7 +153,7 @@ export function AdminDashboard({
                           return (
                             <div
                               key={activity.id}
-                              className="rounded-[12px] border-[0.5px] border-gray-200 bg-white"
+                              className="rounded-xl border-[0.5px] border-gray-200 bg-white shadow-sm"
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                                 <button
@@ -160,7 +190,7 @@ export function AdminDashboard({
                                     return (
                                       <li
                                         key={target.id}
-                                        className="flex items-center justify-between gap-2 rounded-[12px] bg-gray-50 px-3 py-2"
+                                        className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
                                       >
                                         <span className="flex items-center gap-2 text-xs text-gray-700">
                                           <Icon size={14} stroke={1.75} className="text-gray-400" />

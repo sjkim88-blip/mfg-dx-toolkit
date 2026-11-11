@@ -20,16 +20,24 @@ export function DomainCard({
     <button
       type="button"
       onClick={() => onSelect(domain)}
-      className="flex flex-col items-start gap-2 rounded-[12px] border-[0.5px] border-gray-300 bg-white p-4 text-left transition-colors hover:bg-gray-50"
+      className="flex flex-col items-start gap-2 rounded-2xl border-[0.5px] border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="flex w-full items-center justify-between gap-2">
         <span className="text-sm font-medium text-gray-900">{domain.name}</span>
         <span className={`h-2 w-2 rounded-full ${dot.bg} border-[0.5px] ${dot.border}`} aria-hidden />
       </div>
       <span className="text-xs text-gray-500">{domain.nameEn}</span>
-      <span className="text-xs text-gray-400">
-        업무활동 {activityCount}개 · Target {progress.recorded}/{progress.total} 포착됨
-      </span>
+      <div className="mt-1 w-full">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-gray-100">
+          <div
+            className="h-full bg-gray-800 transition-all"
+            style={{ width: `${progress.fraction * 100}%` }}
+          />
+        </div>
+        <span className="mt-1.5 block text-[11px] text-gray-400">
+          업무활동 {activityCount}개 · Target {progress.recorded}/{progress.total} 포착됨
+        </span>
+      </div>
     </button>
   );
 }

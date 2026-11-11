@@ -23,7 +23,7 @@ export function ActivityScreen({ activity, domain }: { activity: Activity; domai
         </p>
       </div>
 
-      <div className="rounded-[12px] border-[0.5px] border-gray-300 bg-white p-5">
+      <div className="rounded-2xl border-[0.5px] border-gray-200 bg-white p-5 shadow-sm">
         <ChecklistList items={activity.targets} />
       </div>
     </div>
