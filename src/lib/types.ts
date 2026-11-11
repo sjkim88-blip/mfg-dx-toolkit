@@ -41,12 +41,31 @@ export interface Floor {
   domains: Domain[];
 }
 
-// 진단 상태 (브라우저 메모리) — targetId -> 포착방식 + 세부입력
+// 데이터 플랫폼 구축 관점에서 보는 추가 메타데이터 — 전부 사용자가 직접 입력(선택)
+export type Priority = "높음" | "중간" | "낮음";
+export const PRIORITIES: Priority[] = ["높음", "중간", "낮음"];
+
+export type DataFrequency = "실시간" | "일단위" | "주단위" | "월단위" | "비정기";
+export const DATA_FREQUENCIES: DataFrequency[] = [
+  "실시간",
+  "일단위",
+  "주단위",
+  "월단위",
+  "비정기",
+];
+
+// 진단 상태 (브라우저 메모리) — targetId -> 포착방식 + 세부입력 + 플랫폼 메타데이터
 // captureDetail은 captureStatus가 '미기록'이 아닐 때만 값을 가진다.
+// priority/frequency/purpose/ownerSystem은 상태와 무관하게 선택 입력 가능
+// (미기록이어도 "중요하지만 아직 못 모으고 있다"를 표시할 수 있어야 하므로).
 // Target 자체는 정적 카탈로그이므로 여기 담지 않고, 세션 상태로 따로 관리한다.
 export interface CaptureRecord {
   status: CaptureStatus;
   captureDetail?: string;
+  priority?: Priority;
+  frequency?: DataFrequency;
+  purpose?: string;
+  ownerSystem?: string;
 }
 
 export type CaptureStatusMap = Record<string, CaptureRecord>;

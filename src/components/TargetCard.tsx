@@ -1,11 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { IconCheck, IconPencil } from "@tabler/icons-react";
-import { CAPTURE_STATUSES, CaptureStatus, Target } from "@/lib/types";
+import { IconCheck, IconChevronDown, IconPencil } from "@tabler/icons-react";
+import {
+  CAPTURE_STATUSES,
+  CaptureRecord,
+  CaptureStatus,
+  DATA_FREQUENCIES,
+  DataFrequency,
+  PRIORITIES,
+  Priority,
+  Target,
+} from "@/lib/types";
 import { useDiagnosis } from "@/context/DiagnosisContext";
-import { captureStatusShades } from "@/lib/diagnosisUtils";
+import { captureStatusShades, priorityShades } from "@/lib/diagnosisUtils";
 import { captureDetailPlaceholders, captureStatusIcons } from "@/lib/captureStatusMeta";
+
+function hasPlatformMeta(record: CaptureRecord): boolean {
+  return Boolean(record.priority || record.frequency || record.purpose || record.ownerSystem);
+}
 
 export function TargetCard({ target }: { target: Target }) {
   const { getCapture, setCapture } = useDiagnosis();
@@ -14,9 +27,19 @@ export function TargetCard({ target }: { target: Target }) {
   const [editing, setEditing] = useState(saved.status === "미기록");
   const [draftStatus, setDraftStatus] = useState<CaptureStatus>(saved.status);
   const [draftDetail, setDraftDetail] = useState(saved.captureDetail ?? "");
+  const [draftPriority, setDraftPriority] = useState<Priority | undefined>(saved.priority);
+  const [draftFrequency, setDraftFrequency] = useState<DataFrequency | undefined>(saved.frequency);
+  const [draftPurpose, setDraftPurpose] = useState(saved.purpose ?? "");
+  const [draftOwnerSystem, setDraftOwnerSystem] = useState(saved.ownerSystem ?? "");
+  const [showPlatformMeta, setShowPlatformMeta] = useState(hasPlatformMeta(saved));
 
   const isDirty =
-    draftStatus !== saved.status || draftDetail !== (saved.captureDetail ?? "");
+    draftStatus !== saved.status ||
+    draftDetail !== (saved.captureDetail ?? "") ||
+    draftPriority !== saved.priority ||
+    draftFrequency !== saved.frequency ||
+    draftPurpose !== (saved.purpose ?? "") ||
+    draftOwnerSystem !== (saved.ownerSystem ?? "");
   const needsDetail = draftStatus !== "미기록";
   const canSave = draftStatus === "미기록" || draftDetail.trim().length > 0;
 
@@ -25,6 +48,10 @@ export function TargetCard({ target }: { target: Target }) {
   function openEditing() {
     setDraftStatus(saved.status);
     setDraftDetail(saved.captureDetail ?? "");
+    setDraftPriority(saved.priority);
+    setDraftFrequency(saved.frequency);
+    setDraftPurpose(saved.purpose ?? "");
+    setDraftOwnerSystem(saved.ownerSystem ?? "");
     setEditing(true);
   }
 
@@ -35,17 +62,36 @@ export function TargetCard({ target }: { target: Target }) {
 
   function handleSave() {
     if (!canSave) return;
-    setCapture(target.id, draftStatus, draftStatus === "미기록" ? undefined : draftDetail.trim());
+    setCapture(target.id, {
+      status: draftStatus,
+      captureDetail: draftDetail,
+      priority: draftPriority,
+      frequency: draftFrequency,
+      purpose: draftPurpose,
+      ownerSystem: draftOwnerSystem,
+    });
     if (draftStatus !== "미기록") setEditing(false);
   }
 
   function handleCancel() {
     setDraftStatus(saved.status);
     setDraftDetail(saved.captureDetail ?? "");
+    setDraftPriority(saved.priority);
+    setDraftFrequency(saved.frequency);
+    setDraftPurpose(saved.purpose ?? "");
+    setDraftOwnerSystem(saved.ownerSystem ?? "");
     setEditing(false);
   }
 
   const isRecorded = saved.status !== "미기록";
+  const summaryParts = [
+    saved.status,
+    saved.captureDetail,
+    saved.priority ? `우선순위 ${saved.priority}` : null,
+    saved.frequency,
+    saved.purpose,
+    saved.ownerSystem,
+  ].filter(Boolean);
 
   return (
     <li
@@ -77,14 +123,11 @@ export function TargetCard({ target }: { target: Target }) {
 
       {!editing ? (
         <div className="flex items-center justify-between gap-2 pl-12">
-          <span className="text-xs text-gray-500">
-            {saved.status}
-            {saved.captureDetail ? ` · ${saved.captureDetail}` : ""}
-          </span>
+          <span className="text-xs text-gray-500">{summaryParts.join(" · ")}</span>
           <button
             type="button"
             onClick={openEditing}
-            className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700"
           >
             <IconPencil size={12} stroke={1.75} />
             수정
@@ -124,6 +167,94 @@ export function TargetCard({ target }: { target: Target }) {
               placeholder={captureDetailPlaceholders[draftStatus]}
               className="animate-[fade-in_0.15s_ease-out] rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
             />
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowPlatformMeta((v) => !v)}
+            className="flex items-center gap-1 self-start text-[11px] text-gray-400 transition-colors hover:text-gray-600"
+          >
+            데이터 플랫폼 정보
+            <IconChevronDown
+              size={12}
+              stroke={1.75}
+              className={`transition-transform ${showPlatformMeta ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showPlatformMeta && (
+            <div className="animate-[fade-in_0.15s_ease-out] flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-gray-400">
+                  우선순위 — 플랫폼·에이전트 구축 시 이 데이터가 얼마나 급한지
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {PRIORITIES.map((option) => {
+                    const selected = option === draftPriority;
+                    const shade = priorityShades[option];
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setDraftPriority(selected ? undefined : option)}
+                        className={`rounded-xl border px-2 py-1.5 text-xs transition-all ${
+                          selected
+                            ? `${shade.bg} ${shade.text} ${shade.border}`
+                            : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-gray-400">발생 주기</span>
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+                  {DATA_FREQUENCIES.map((option) => {
+                    const selected = option === draftFrequency;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setDraftFrequency(selected ? undefined : option)}
+                        className={`rounded-xl border px-2 py-1.5 text-xs transition-all ${
+                          selected
+                            ? "border-gray-800 bg-gray-800 text-white"
+                            : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-gray-400">활용 목적 — 에이전트가 이 데이터를 왜 필요로 하는지</span>
+                <input
+                  type="text"
+                  value={draftPurpose}
+                  onChange={(e) => setDraftPurpose(e.target.value)}
+                  placeholder="예: 설비 이상감지, 수요예측 입력값, 품질 리포팅"
+                  className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-gray-400">담당 시스템·채널</span>
+                <input
+                  type="text"
+                  value={draftOwnerSystem}
+                  onChange={(e) => setDraftOwnerSystem(e.target.value)}
+                  placeholder="예: MES, 엑셀 대장, 담당자 구두 확인"
+                  className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 transition-colors focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+                />
+              </div>
+            </div>
           )}
 
           <div className="flex items-center justify-end gap-2">

@@ -4,15 +4,21 @@ import { useState } from "react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { floors } from "@/data/diagnosisData";
 import { useDiagnosis } from "@/context/DiagnosisContext";
-import { getActivityProgress, getDomainProgress, getFloorProgress } from "@/lib/diagnosisUtils";
+import {
+  countCriticalGaps,
+  getActivityProgress,
+  getDomainProgress,
+  getFloorProgress,
+} from "@/lib/diagnosisUtils";
 import { captureStatusIcons } from "@/lib/captureStatusMeta";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Activity, Domain, Progress } from "@/lib/types";
 
-function RateHint({ progress }: { progress: Progress }) {
+function RateHint({ progress, criticalGaps }: { progress: Progress; criticalGaps?: number }) {
   return (
     <span className="text-[11px] text-gray-400 whitespace-nowrap">
       자동화 {Math.round(progress.autoRate * 100)}% · 미기록 {Math.round(progress.unrecordedRate * 100)}%
+      {criticalGaps ? ` · 핵심 미기록 ${criticalGaps}건` : ""}
     </span>
   );
 }
@@ -49,8 +55,9 @@ export function AdminDashboard({
         <h1 className="text-lg font-semibold text-gray-900">관리자 화면</h1>
         <p className="mt-1 text-sm text-gray-500">
           Floor → Domain → Activity 계층으로 전체 Target 포착 현황을 확인합니다. 자동화 비율과
-          미기록 비율을 함께 표시해 비어있는 영역을 확인할 수 있습니다. Activity를 펼치면 Target별
-          세부입력 내용을 볼 수 있습니다.
+          미기록 비율, 그리고 &ldquo;핵심 미기록&rdquo;(우선순위 높음인데 아직 못 모으는 Target) 건수를 함께
+          표시해 데이터 플랫폼 구축 시 가장 먼저 메워야 할 공백을 확인할 수 있습니다. Activity를 펼치면
+          Target별 세부입력 내용을 볼 수 있습니다.
         </p>
       </div>
 
@@ -72,6 +79,8 @@ export function AdminDashboard({
         .sort((a, b) => a.order - b.order)
         .map((floor) => {
           const floorProgress = getFloorProgress(floor, captureStatusMap);
+          const floorTargets = floor.domains.flatMap((d) => d.activities.flatMap((a) => a.targets));
+          const floorCriticalGaps = countCriticalGaps(floorTargets, captureStatusMap);
           return (
             <section
               key={floor.id}
@@ -84,12 +93,14 @@ export function AdminDashboard({
                 <StatusBadge progress={floorProgress} />
               </div>
               <div className="mb-4">
-                <RateHint progress={floorProgress} />
+                <RateHint progress={floorProgress} criticalGaps={floorCriticalGaps} />
               </div>
 
               <div className="flex flex-col gap-4">
                 {floor.domains.map((domain) => {
                   const domainProgress = getDomainProgress(domain, captureStatusMap);
+                  const domainTargets = domain.activities.flatMap((a) => a.targets);
+                  const domainCriticalGaps = countCriticalGaps(domainTargets, captureStatusMap);
                   return (
                     <div
                       key={domain.id}
@@ -102,11 +113,12 @@ export function AdminDashboard({
                         <StatusBadge progress={domainProgress} />
                       </div>
                       <div className="mb-3">
-                        <RateHint progress={domainProgress} />
+                        <RateHint progress={domainProgress} criticalGaps={domainCriticalGaps} />
                       </div>
                       <div className="flex flex-col gap-2">
                         {domain.activities.map((activity) => {
                           const activityProgress = getActivityProgress(activity, captureStatusMap);
+                          const activityCriticalGaps = countCriticalGaps(activity.targets, captureStatusMap);
                           const isExpanded = expanded.has(activity.id);
                           return (
                             <div
@@ -122,7 +134,7 @@ export function AdminDashboard({
                                   {activity.name}
                                 </button>
                                 <span className="flex items-center gap-2">
-                                  <RateHint progress={activityProgress} />
+                                  <RateHint progress={activityProgress} criticalGaps={activityCriticalGaps} />
                                   <StatusBadge progress={activityProgress} />
                                   <button
                                     type="button"
@@ -155,9 +167,17 @@ export function AdminDashboard({
                                           {target.name}
                                           <span className="text-gray-400">· {target.dataForm}</span>
                                         </span>
-                                        <span className="text-xs text-gray-400">
-                                          {status}
-                                          {record?.captureDetail ? ` · ${record.captureDetail}` : ""}
+                                        <span className="text-right text-xs text-gray-400">
+                                          {[
+                                            status,
+                                            record?.captureDetail,
+                                            record?.priority ? `우선순위 ${record.priority}` : null,
+                                            record?.frequency,
+                                            record?.purpose,
+                                            record?.ownerSystem,
+                                          ]
+                                            .filter(Boolean)
+                                            .join(" · ")}
                                         </span>
                                       </li>
                                     );

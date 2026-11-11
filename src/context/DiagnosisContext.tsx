@@ -1,26 +1,36 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { CaptureRecord, CaptureStatus, CaptureStatusMap } from "@/lib/types";
+import { CaptureRecord, CaptureStatusMap } from "@/lib/types";
 
 const DEFAULT_RECORD: CaptureRecord = { status: "미기록" };
 
 interface DiagnosisContextValue {
   captureStatusMap: CaptureStatusMap;
   getCapture: (targetId: string) => CaptureRecord;
-  setCapture: (targetId: string, status: CaptureStatus, captureDetail?: string) => void;
+  setCapture: (targetId: string, record: CaptureRecord) => void;
 }
 
 const DiagnosisContext = createContext<DiagnosisContextValue | null>(null);
 
+function cleanRecord(record: CaptureRecord): CaptureRecord {
+  return {
+    status: record.status,
+    captureDetail: record.status === "미기록" ? undefined : record.captureDetail || undefined,
+    priority: record.priority || undefined,
+    frequency: record.frequency || undefined,
+    purpose: record.purpose?.trim() || undefined,
+    ownerSystem: record.ownerSystem?.trim() || undefined,
+  };
+}
+
 export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
   const [captureStatusMap, setCaptureStatusMap] = useState<CaptureStatusMap>({});
 
-  const setCapture = useCallback((targetId: string, status: CaptureStatus, captureDetail?: string) => {
+  const setCapture = useCallback((targetId: string, record: CaptureRecord) => {
     setCaptureStatusMap((prev) => ({
       ...prev,
-      [targetId]:
-        status === "미기록" ? { status } : { status, captureDetail: captureDetail || undefined },
+      [targetId]: cleanRecord(record),
     }));
   }, []);
 

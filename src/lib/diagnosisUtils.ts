@@ -4,6 +4,7 @@ import {
   CaptureStatusMap,
   Domain,
   Floor,
+  Priority,
   Progress,
   Target,
 } from "@/lib/types";
@@ -56,6 +57,14 @@ export function getFloorProgress(floor: Floor, statuses: CaptureStatusMap): Prog
   );
 }
 
+// 우선순위 '높음'인데 아직 '미기록'인 항목 수 — 데이터 플랫폼 구축 시 가장 먼저 메워야 할 공백
+export function countCriticalGaps(targets: Target[], statuses: CaptureStatusMap): number {
+  return targets.filter((t) => {
+    const record = statuses[t.id];
+    return (record?.status ?? "미기록") === "미기록" && record?.priority === "높음";
+  }).length;
+}
+
 // 색상 대신 배경 진하기로만 상태를 구분한다
 export const statusBucketClasses: Record<
   Progress["bucket"],
@@ -82,4 +91,11 @@ export const captureStatusShades: Record<
   수기기록: { bg: "bg-gray-300", text: "text-gray-800", border: "border-gray-300" },
   "시스템입력(수동)": { bg: "bg-gray-500", text: "text-white", border: "border-gray-500" },
   "자동센싱·기록": { bg: "bg-gray-800", text: "text-white", border: "border-gray-800" },
+};
+
+// 우선순위도 색상 없이 배경 진하기만으로 구분한다 (낮음 -> 높음 순으로 진해짐)
+export const priorityShades: Record<Priority, { bg: string; text: string; border: string }> = {
+  낮음: { bg: "bg-gray-200", text: "text-gray-700", border: "border-gray-300" },
+  중간: { bg: "bg-gray-500", text: "text-white", border: "border-gray-500" },
+  높음: { bg: "bg-gray-800", text: "text-white", border: "border-gray-800" },
 };
